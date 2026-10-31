@@ -1,102 +1,60 @@
 (() => {
-  const panel = document.createElement('section');
-  panel.id = 'krok-swarm-panel';
-  panel.className = 'relative z-20 max-w-6xl mx-auto mb-16 px-4 sm:px-6';
-  panel.innerHTML = `
-    <div class="rounded-3xl border border-[#E05B70]/30 bg-[#1C1519]/95 p-5 sm:p-7 shadow-2xl shadow-[#A83249]/20">
-      <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-4 mb-6">
-        <div>
-          <div class="text-[11px] font-mono uppercase tracking-[0.18em] text-[#E05B70]">KROK SWARM CONTROL ROOM</div>
-          <h2 class="mt-2 text-2xl sm:text-3xl font-extrabold font-display">Рій агентів для простих команд</h2>
-          <p class="mt-2 text-sm text-[#B9AEB3] max-w-2xl">Напишіть, що потрібно знайти, перевірити або опублікувати. Демо-режим показує процес без доступу до секретів; реальні AI-запуски виконуються серверним workflow.</p>
-        </div>
-        <div class="flex items-center gap-2 text-xs font-mono text-[#B9AEB3]"><span class="w-2 h-2 rounded-full bg-[#E05B70] animate-pulse"></span>SAFE PUBLIC SOURCES ONLY</div>
+  const workspace = document.createElement('section');
+  workspace.id = 'krok-agent-workspace';
+  workspace.className = 'relative z-20 max-w-7xl mx-auto mb-16 px-4 sm:px-6';
+  workspace.innerHTML = `
+    <div class="rounded-3xl border border-[#E05B70]/30 bg-[#151015]/95 p-4 sm:p-6 shadow-2xl shadow-[#A83249]/20">
+      <div class="flex flex-col xl:flex-row xl:items-end justify-between gap-4 mb-5">
+        <div><div class="text-[11px] font-mono uppercase tracking-[0.18em] text-[#E05B70]">KROK BROWSER STUDIO</div><h2 class="mt-2 text-2xl sm:text-3xl font-extrabold font-display">Робоче місце рою агентів</h2><p class="mt-2 text-sm text-[#B9AEB3] max-w-3xl">Працюйте прямо в браузері: редагуйте код простим текстом, спостерігайте взаємодію агентів і одразу бачте результат у візуальному preview. Будь-яке вікно можна розгорнути або згорнути.</p></div>
+        <div class="flex flex-wrap items-center gap-2 text-xs font-mono"><span id="studio-state" class="rounded-full border border-white/10 px-3 py-1 text-[#B9AEB3]">Готово</span><button id="studio-run" class="rounded-xl bg-gradient-to-r from-[#A83249] to-[#E05B70] px-4 py-2 font-bold text-white">Запустити рій</button><button id="studio-pause" class="rounded-xl border border-white/15 px-4 py-2 text-white">Пауза</button><button id="studio-publish" class="rounded-xl border border-[#E05B70]/50 px-4 py-2 text-white">GitHub Pages</button></div>
       </div>
-      <form id="swarm-form" class="flex flex-col sm:flex-row gap-3">
-        <input id="swarm-command" class="min-w-0 flex-1 rounded-2xl border border-white/10 bg-[#100D10] px-4 py-3 text-sm text-white outline-none focus:border-[#E05B70]" placeholder="Наприклад: знайди 5 відкритих джерел про AI-автоматизацію" autocomplete="off">
-        <button class="rounded-2xl bg-gradient-to-r from-[#A83249] to-[#E05B70] px-5 py-3 text-sm font-bold text-white hover:opacity-90" type="submit">Запустити рій</button>
-      </form>
-      <div id="swarm-status" class="mt-6 grid gap-3 md:grid-cols-3" aria-live="polite"></div>
-      <div class="mt-6 grid gap-5 lg:grid-cols-[1.25fr_.75fr]">
-        <div><div class="mb-2 text-xs font-mono uppercase tracking-wider text-[#B9AEB3]">Журнал виконання</div><div id="swarm-log" class="min-h-40 rounded-2xl border border-white/10 bg-[#100D10] p-4 text-xs leading-6 text-[#B9AEB3]"></div></div>
-        <div><div class="mb-2 text-xs font-mono uppercase tracking-wider text-[#B9AEB3]">Відкриті джерела</div><div id="swarm-sources" class="min-h-40 rounded-2xl border border-white/10 bg-[#100D10] p-4 text-xs text-[#B9AEB3]"></div></div>
+      <div class="mb-4 flex flex-col sm:flex-row gap-3"><input id="studio-command" class="min-w-0 flex-1 rounded-xl border border-white/10 bg-[#0E0B0E] px-4 py-3 text-sm outline-none focus:border-[#E05B70]" value="Створи сучасний односторінковий сайт для мого бізнесу" placeholder="Напишіть завдання агентам простими словами"><input id="studio-repo" class="w-full sm:w-64 rounded-xl border border-white/10 bg-[#0E0B0E] px-4 py-3 text-sm outline-none focus:border-[#E05B70]" value="areyaslavic-creator/krok-agent-swarm" aria-label="GitHub repository"></div>
+      <div id="studio-grid" class="grid gap-4 lg:grid-cols-3">
+        <section class="studio-pane rounded-2xl border border-white/10 bg-[#1C1519] overflow-hidden" data-pane="code"><header class="flex items-center justify-between gap-2 border-b border-white/10 px-4 py-3"><div><span class="font-bold">1. Код / текст</span><span class="ml-2 text-[10px] font-mono text-[#B9AEB3]">EDITABLE</span></div><div class="flex gap-1"><button class="pane-collapse rounded-lg px-2 py-1 text-xs text-[#B9AEB3]" title="Згорнути">−</button><button class="pane-full rounded-lg px-2 py-1 text-xs text-[#B9AEB3]" title="На весь екран">□</button></div></header><div class="pane-body p-3"><textarea id="studio-code" spellcheck="false" class="h-[380px] w-full resize-y rounded-xl border border-white/10 bg-[#0B090B] p-3 font-mono text-xs leading-5 text-[#F2DDE2] outline-none focus:border-[#E05B70]"></textarea><div class="mt-3 flex flex-wrap gap-2"><button id="studio-apply" class="rounded-lg bg-[#A83249] px-3 py-2 text-xs font-bold">Застосувати правки</button><button id="studio-reset" class="rounded-lg border border-white/10 px-3 py-2 text-xs">Скинути</button></div></div></section>
+        <section class="studio-pane rounded-2xl border border-white/10 bg-[#1C1519] overflow-hidden" data-pane="agents"><header class="flex items-center justify-between gap-2 border-b border-white/10 px-4 py-3"><div><span class="font-bold">2. Взаємодія агентів</span><span class="ml-2 text-[10px] font-mono text-[#B9AEB3]">LIVE LOG</span></div><div class="flex gap-1"><button class="pane-collapse rounded-lg px-2 py-1 text-xs text-[#B9AEB3]" title="Згорнути">−</button><button class="pane-full rounded-lg px-2 py-1 text-xs text-[#B9AEB3]" title="На весь екран">□</button></div></header><div class="pane-body p-3"><div id="studio-agents" class="mb-3 grid grid-cols-2 gap-2"></div><div id="studio-log" class="h-[244px] overflow-auto rounded-xl border border-white/10 bg-[#0B090B] p-3 font-mono text-xs leading-5 text-[#B9AEB3]" aria-live="polite"></div></div></section>
+        <section class="studio-pane rounded-2xl border border-white/10 bg-[#1C1519] overflow-hidden" data-pane="preview"><header class="flex items-center justify-between gap-2 border-b border-white/10 px-4 py-3"><div><span class="font-bold">3. Візуальний preview</span><span class="ml-2 text-[10px] font-mono text-[#B9AEB3]">ONLINE</span></div><div class="flex gap-1"><button id="studio-refresh" class="rounded-lg px-2 py-1 text-xs text-[#B9AEB3]" title="Оновити preview">↻</button><button class="pane-collapse rounded-lg px-2 py-1 text-xs text-[#B9AEB3]" title="Згорнути">−</button><button class="pane-full rounded-lg px-2 py-1 text-xs text-[#B9AEB3]" title="На весь екран">□</button></div></header><div class="pane-body p-3"><iframe id="studio-preview" class="h-[380px] w-full rounded-xl border border-white/10 bg-white" title="Візуальний preview сайту" sandbox="allow-scripts"></iframe><div class="mt-3 text-xs text-[#B9AEB3]">Зміни в текстовому редакторі застосовуються до preview без перезавантаження сторінки.</div></div></section>
       </div>
+      <div id="studio-notice" class="mt-4 hidden rounded-xl border border-[#A83249]/40 bg-[#24151C] p-3 text-sm text-[#DCC2C8]" aria-live="polite"></div>
     </div>`;
 
   const hero = document.querySelector('#hero');
-  if (hero) hero.insertAdjacentElement('afterend', panel);
+  if (hero) hero.insertAdjacentElement('afterend', workspace);
+  const studioStyle = document.createElement('style');
+  studioStyle.textContent = `.studio-pane.is-collapsed .pane-body{display:none}.studio-pane.is-fullscreen{position:fixed;inset:16px;z-index:9999;background:#151015;box-shadow:0 20px 80px rgba(0,0,0,.75);overflow:auto}.studio-pane.is-fullscreen .pane-body{display:block}.studio-pane.is-fullscreen .pane-body iframe,.studio-pane.is-fullscreen .pane-body textarea{height:calc(100vh - 150px)}@media(max-width:900px){.studio-pane.is-fullscreen{inset:8px}.studio-pane.is-fullscreen .pane-body iframe,.studio-pane.is-fullscreen .pane-body textarea{height:calc(100vh - 125px)}}`;
+  document.head.appendChild(studioStyle);
 
-  const builder = document.createElement('section');
-  builder.className = 'relative z-20 max-w-6xl mx-auto mb-16 px-4 sm:px-6';
-  builder.innerHTML = `
-    <div class="rounded-3xl border border-white/10 bg-[#140E13] p-5 sm:p-7">
-      <div class="mb-5"><div class="text-[11px] font-mono uppercase tracking-[0.18em] text-[#E05B70]">AGENT SITE BUILDER</div><h2 class="mt-2 text-2xl font-extrabold font-display">Створити, редагувати й опублікувати сайт</h2><p class="mt-2 text-sm text-[#B9AEB3]">Опишіть результат простими словами. Зараз доступний безпечний demo-flow; для live GitHub actions потрібен підключений серверний OAuth/GitHub App.</p></div>
-      <div class="grid gap-4 lg:grid-cols-4">
-        <form id="create-site-form" class="rounded-2xl border border-white/10 bg-[#1C1519] p-4"><div class="font-bold">1. Створити сайт</div><label class="mt-3 block text-xs text-[#B9AEB3]">Назва<input id="site-name" class="mt-1 w-full rounded-xl bg-[#100D10] border border-white/10 p-2 text-sm" value="my-new-site"></label><label class="mt-3 block text-xs text-[#B9AEB3]">Що створити?<textarea id="site-brief" class="mt-1 h-24 w-full rounded-xl bg-[#100D10] border border-white/10 p-2 text-sm" placeholder="Лендінг для кав'ярні з меню і формою контакту"></textarea></label><button class="mt-3 rounded-xl bg-[#A83249] px-4 py-2 text-xs font-bold" type="submit">Підготувати прототип</button></form>
-        <form id="edit-site-form" class="rounded-2xl border border-white/10 bg-[#1C1519] p-4"><div class="font-bold">2. Редагувати</div><label class="mt-3 block text-xs text-[#B9AEB3]">Яку зміну зробити?<textarea id="edit-brief" class="mt-1 h-24 w-full rounded-xl bg-[#100D10] border border-white/10 p-2 text-sm" placeholder="Зроби заголовок коротшим і додай блок відгуків"></textarea></label><button class="mt-3 rounded-xl border border-[#E05B70]/50 px-4 py-2 text-xs font-bold" type="submit">Створити patch-план</button></form>
-        <form id="publish-site-form" class="rounded-2xl border border-white/10 bg-[#1C1519] p-4"><div class="font-bold">3. GitHub Pages</div><label class="mt-3 block text-xs text-[#B9AEB3]">Репозиторій<input id="repo-name" class="mt-1 w-full rounded-xl bg-[#100D10] border border-white/10 p-2 text-sm" value="my-new-site"></label><div class="mt-3 rounded-xl bg-[#100D10] p-3 text-xs text-[#B9AEB3]">Токени не вводяться сюди. Справжня публікація буде доступна після підключення серверного GitHub OAuth.</div><button class="mt-3 rounded-xl bg-gradient-to-r from-[#A83249] to-[#E05B70] px-4 py-2 text-xs font-bold" type="submit">Підготувати публікацію</button></form>
-        <form id="social-form" class="rounded-2xl border border-white/10 bg-[#1C1519] p-4"><div class="font-bold">4. Соцмережі</div><label class="mt-3 block text-xs text-[#B9AEB3]">Публічний URL / RSS<input id="social-url" class="mt-1 w-full rounded-xl bg-[#100D10] border border-white/10 p-2 text-sm" placeholder="YouTube RSS або публічна сторінка"></label><label class="mt-3 block text-xs text-[#B9AEB3]">Тема контенту<input id="social-topic" class="mt-1 w-full rounded-xl bg-[#100D10] border border-white/10 p-2 text-sm" value="AI для бізнесу"></label><button class="mt-3 rounded-xl border border-[#E05B70]/50 px-4 py-2 text-xs font-bold" type="submit">Зібрати й підготувати текст</button></form>
-      </div><div id="builder-output" class="mt-4 hidden rounded-2xl border border-[#A83249]/30 bg-[#100D10] p-4 text-sm text-[#B9AEB3]" aria-live="polite"></div>
-    </div>`;
-  if (hero) hero.insertAdjacentElement('afterend', builder);
+  const defaultCode = `<main style="font-family:Arial,sans-serif;max-width:720px;margin:0 auto;padding:48px 24px;color:#23151b;background:#fff7f8;border-radius:20px"><p style="color:#a83249;font-weight:700;letter-spacing:.08em">YOUR BRAND</p><h1 style="font-size:42px;line-height:1.05;margin:16px 0">Ваш сайт починається тут</h1><p style="font-size:18px;line-height:1.5;color:#644f57">Змініть цей текст у вікні редактора. Preview оновиться одразу після натискання «Застосувати правки».</p><button style="border:0;border-radius:999px;background:#a83249;color:white;padding:13px 20px;font-weight:700">Зв'язатися</button></main>`;
+  const code = document.querySelector('#studio-code');
+  const preview = document.querySelector('#studio-preview');
+  const log = document.querySelector('#studio-log');
+  const state = document.querySelector('#studio-state');
+  const notice = document.querySelector('#studio-notice');
+  const runButton = document.querySelector('#studio-run');
+  const pauseButton = document.querySelector('#studio-pause');
+  const agentsEl = document.querySelector('#studio-agents');
+  code.value = localStorage.getItem('krok-studio-code') || defaultCode;
 
-  const agents = [
-    ['dispatcher', 'Диспетчер', 'розбирає команду'],
-    ['researcher', 'Дослідник', 'читає відкриті джерела'],
-    ['analyst', 'Аналітик', 'перевіряє факти й посилання'],
-    ['developer', 'Розробник', 'готує зміни сайту'],
-    ['validator', 'Перевіряльник', 'перевіряє результат'],
-    ['publisher', 'Видавець', 'готує GitHub Pages']
-  ];
-  const status = document.querySelector('#swarm-status');
-  const log = document.querySelector('#swarm-log');
-  const sources = document.querySelector('#swarm-sources');
-  const form = document.querySelector('#swarm-form');
-  const command = document.querySelector('#swarm-command');
+  const agents = [['dispatcher','Диспетчер'],['researcher','Дослідник'],['analyst','Аналітик'],['developer','Розробник'],['validator','Перевіряльник'],['publisher','Видавець']];
+  let running = false; let paused = false; let step = 0; let timer = null;
+  agentsEl.innerHTML = agents.map(([id, name]) => `<div data-agent-card="${id}" class="rounded-xl border border-white/10 bg-[#251A20] p-2 text-xs"><span data-agent-dot="${id}" class="mr-2 inline-block h-2 w-2 rounded-full bg-white/20"></span>${name}<div data-agent-state="${id}" class="mt-1 text-[10px] text-[#B9AEB3]">очікує</div></div>`).join('');
 
-  function renderStatuses(active = '') {
-    status.innerHTML = agents.map(([id, name, desc]) => `<div class="rounded-2xl border border-white/10 bg-[#241A20] p-3"><div class="flex items-center gap-2"><span class="status-dot w-2 h-2 rounded-full bg-white/20" data-agent="${id}"></span><span class="font-bold text-sm">${name}</span></div><div class="mt-1 text-[11px] text-[#B9AEB3]">${active === id ? 'працює…' : desc}</div></div>`).join('');
-    if (active) document.querySelector(`[data-agent="${active}"]`)?.classList.add('bg-[#E05B70]', 'animate-pulse');
-  }
-  function addLog(text) { log.insertAdjacentHTML('beforeend', `<div><span class="text-[#E05B70]">›</span> ${text}</div>`); log.scrollTop = log.scrollHeight; }
-  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+  function safe(value) { return String(value).replace(/[&<>\"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','\\':'&#92;','"':'&quot;'}[ch])); }
+  function setPreview() { localStorage.setItem('krok-studio-code', code.value); preview.srcdoc = code.value; }
+  function writeLog(text) { log.insertAdjacentHTML('beforeend', `<div><span class="text-[#E05B70]">›</span> ${safe(text)}</div>`); log.scrollTop = log.scrollHeight; }
+  function setNotice(text) { notice.classList.remove('hidden'); notice.innerHTML = text; }
+  function setAgent(id, active, done) { const dot = document.querySelector(`[data-agent-dot="${id}"]`); const label = document.querySelector(`[data-agent-state="${id}"]`); if (dot) dot.className = `mr-2 inline-block h-2 w-2 rounded-full ${active ? 'bg-[#E05B70] animate-pulse' : done ? 'bg-emerald-400' : 'bg-white/20'}`; if (label) label.textContent = active ? 'працює…' : done ? 'готово' : 'очікує'; }
+  function resetAgents() { agents.forEach(([id]) => setAgent(id, false, false)); }
+  function finish() { running = false; paused = false; state.textContent = 'Готово'; state.className = 'rounded-full border border-emerald-400/30 px-3 py-1 text-emerald-300'; runButton.textContent = 'Запустити рій'; }
+  function tick() { if (!running || paused) return; if (step >= agents.length) { finish(); writeLog('Рій завершив роботу. Перевірте preview і натисніть GitHub Pages для публікації через Actions.'); return; } const [id, name] = agents[step]; if (step > 0) setAgent(agents[step - 1][0], false, true); setAgent(id, true, false); writeLog(`${name}: ${id === 'researcher' ? 'аналізує дозволені публічні джерела' : id === 'developer' ? 'готує зміни для preview' : id === 'publisher' ? 'підготував deployment-запит' : 'виконує етап задачі'}`); step += 1; timer = setTimeout(tick, 900); }
 
-  renderStatuses();
+  setPreview(); resetAgents();
+  document.querySelector('#studio-apply').addEventListener('click', () => { setPreview(); setNotice('Правки застосовано до живого preview. Роботу рою можна продовжити кнопкою «Запустити рій».'); });
+  document.querySelector('#studio-reset').addEventListener('click', () => { code.value = defaultCode; setPreview(); });
+  document.querySelector('#studio-refresh').addEventListener('click', setPreview);
+  runButton.addEventListener('click', () => { if (running) return; running = true; paused = false; step = 0; resetAgents(); log.innerHTML = ''; state.textContent = 'Працює'; state.className = 'rounded-full border border-[#E05B70]/40 px-3 py-1 text-[#F29AAA]'; writeLog(`Команда: ${document.querySelector('#studio-command').value}`); tick(); });
+  pauseButton.addEventListener('click', () => { if (!running) return; paused = !paused; state.textContent = paused ? 'Призупинено' : 'Працює'; pauseButton.textContent = paused ? 'Продовжити' : 'Пауза'; writeLog(paused ? 'Роботу призупинено. Правки можна внести у вікні коду.' : 'Роботу продовжено.'); if (!paused) tick(); });
+  document.querySelector('#studio-publish').addEventListener('click', () => { const repo = safe(document.querySelector('#studio-repo').value || 'areyaslavic-creator/krok-agent-swarm'); setNotice(`Підготовлено публікацію для <strong>${repo}</strong>. GitHub Pages запускається через Actions, щоб токен залишався на сервері. <a class="ml-1 text-[#F29AAA] underline" href="https://github.com/${repo}/actions/workflows/generated-content-pages.yml" target="_blank" rel="noreferrer">Відкрити workflow</a>`); writeLog('Видавець: відкрийте workflow і натисніть Run workflow для безпечного деплою.'); });
 
-  const output = document.querySelector('#builder-output');
-  const showOutput = (title, body) => { output.classList.remove('hidden'); output.innerHTML = `<div class="font-bold text-white">${title}</div><div class="mt-2">${body}</div>`; };
-  document.querySelector('#create-site-form')?.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const name = document.querySelector('#site-name').value.trim() || 'my-new-site';
-    const brief = document.querySelector('#site-brief').value.trim() || 'односторінковий сайт';
-    showOutput('Прототип підготовлено', `Проєкт <strong>${name}</strong> створено в demo-flow за описом: «${brief}». Наступний крок — передати задачу агенту-розробнику на сервері.`);
-  });
-  document.querySelector('#edit-site-form')?.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const brief = document.querySelector('#edit-brief').value.trim() || 'оновити дизайн';
-    showOutput('Patch-план створено', `Рій підготував би зміну: «${brief}». Перед застосуванням live-версії перевіряльник має показати diff і чек-лист.`);
-  });
-  document.querySelector('#publish-site-form')?.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const repo = document.querySelector('#repo-name').value.trim() || 'my-new-site';
-    showOutput('Публікація підготовлена', `Репозиторій <strong>${repo}</strong> готовий до GitHub Pages. У live-режимі сервер створить коміт, запустить workflow і поверне посилання після успішного деплою.`);
-  });
-  document.querySelector('#social-form')?.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const url = document.querySelector('#social-url').value.trim() || 'публічний RSS/URL';
-    const topic = document.querySelector('#social-topic').value.trim() || 'AI для бізнесу';
-    showOutput('Контент-пайплайн підготовлено', `Дослідник перевірить <strong>${url}</strong>, аналітик збере факти про «${topic}», а редактор створить чернетку з цитатами й URL. Перед публікацією потрібен людський перегляд.`);
-  });
-  form?.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const value = command.value.trim() || 'перевір відкриті джерела для мого запиту';
-    log.innerHTML = ''; sources.innerHTML = '<div class="text-[#B9AEB3]">Демо не робить зовнішніх запитів. Реальний збір запускається через GitHub Actions після налаштування secrets.</div>';
-    addLog(`Команда прийнята: «${value.slice(0, 100)}»`);
-    for (const [id, name] of agents) {
-      renderStatuses(id); addLog(`${name}: ${id === 'researcher' ? 'дозволені лише публічні URL/RSS/API' : 'крок виконано в демонстраційному режимі'}`); await sleep(320);
-    }
-    renderStatuses();
-    sources.innerHTML = '<div class="rounded-xl border border-[#A83249]/30 bg-[#1C1519] p-3"><div class="font-bold text-white">Джерела з’являться після реального запуску</div><div class="mt-1">Зберігатимуться URL, час отримання та короткий опис. Приватні сторінки й обхід обмежень заборонені.</div></div>';
-    addLog('Готово: демо-процес завершено. Для реального запуску додайте AI/GitHub secrets у налаштуваннях репозиторію.');
-  });
+  document.querySelectorAll('.pane-collapse').forEach(button => button.addEventListener('click', () => { const pane = button.closest('.studio-pane'); pane.classList.toggle('is-collapsed'); button.textContent = pane.classList.contains('is-collapsed') ? '+' : '−'; }));
+  document.querySelectorAll('.pane-full').forEach(button => button.addEventListener('click', () => { const pane = button.closest('.studio-pane'); pane.classList.toggle('is-fullscreen'); button.textContent = pane.classList.contains('is-fullscreen') ? '×' : '□'; }));
 })();
