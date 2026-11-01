@@ -1,3 +1,4 @@
+import base64
 import ipaddress
 import json
 import os
@@ -7,6 +8,7 @@ import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
+from html import unescape
 from html.parser import HTMLParser
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
@@ -39,8 +41,65 @@ class PageParser(HTMLParser):
             self.title.append(data.strip())
 
 
+class SearchParser(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.results = []
+        self._current = None
+
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        if tag.lower() == "a" and "result__a" in (attrs.get("class") or ""):
+            self._current = {"title": [], "url": attrs.get("href", "")}
+
+    def handle_endtag(self, tag):
+        if tag.lower() == "a" and self._current:
+            item = {"title": clean("".join(self._current["title"]), 180), "url": self._current["url"]}
+            if item["title"] and item["url"]:
+                self.results.append(item)
+            self._current = None
+
+    def handle_data(self, data):
+        if self._current is not None:
+            self._current["title"].append(data)
+
+
 def clean(value, limit=600):
     return re.sub(r"\s+", " ", str(value or "")).strip()[:limit]
+
+
+def search_public_web(query):
+    query = clean(query, 300)
+    if not query:
+        return []
+    url = "https://html.duckduckgo.com/html/?q=" + urllib.parse.quote_plus(query)
+    try:
+        request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept": "text/html"})
+        with urllib.request.urlopen(request, timeout=12) as response:
+            html = response.read(MAX_BYTES).decode("utf-8", errors="replace")
+        parser = SearchParser()
+        parser.feed(html)
+        results = parser.results
+        if not results:
+            bing_url = "https://www.bing.com/search?q=" + urllib.parse.quote_plus(query)
+            request = urllib.request.Request(bing_url, headers={"User-Agent": "Mozilla/5.0 " + USER_AGENT, "Accept": "text/html"})
+            with urllib.request.urlopen(request, timeout=12) as response:
+                bing_html = response.read(MAX_BYTES).decode("utf-8", errors="replace")
+            results = [{"title": clean(unescape(re.sub(r"<[^>]+>", " ", title)), 180), "url": unwrap_search_url(unescape(link))} for link, title in re.findall(r'<li class="b_algo"[\s\S]*?<h2><a[^>]*href="([^"]+)"[^>]*>([\s\S]*?)</a>', bing_html)[:8]]
+        return [{"url": item["url"], "title": item["title"], "kind": "public_search_result", "public": True} for item in results[:6] if is_research_candidate(item["url"])]
+    except Exception:
+        return []
+
+
+def unwrap_search_url(url):
+    parsed = urllib.parse.urlparse(url)
+    token = urllib.parse.parse_qs(parsed.query).get("u", [""])[0]
+    if token.startswith("a1"):
+        try:
+            return base64.urlsafe_b64decode(token[2:] + "===").decode("utf-8")
+        except (ValueError, UnicodeDecodeError):
+            pass
+    return url
 
 
 def valid_public_url(raw):
@@ -59,6 +118,16 @@ def valid_public_url(raw):
     except (socket.gaierror, ValueError):
         return False
     return True
+
+
+def is_research_candidate(raw):
+    if not valid_public_url(raw):
+        return False
+    parsed = urllib.parse.urlparse(raw)
+    host = (parsed.hostname or "").lower()
+    blocked_hosts = {"bing.com", "www.bing.com", "google.com", "www.google.com", "duckduckgo.com", "html.duckduckgo.com", "chat.openai.com", "android.chat.openai.com", "ios.chat.openai.com"}
+    blocked_path = parsed.path.lower().startswith(("/auth", "/login", "/cdn-cgi", "/search"))
+    return host not in blocked_hosts and not blocked_path
 
 
 def fetch_public(url):
@@ -117,7 +186,7 @@ class KrokHandler(SimpleHTTPRequestHandler):
             json_response(self, {"ok": True, "service": "krok-agent-swarm", "research": "public-only"})
             return
         if path == "/api/status":
-            json_response(self, {"ok": True, "capabilities": ["public-page-research", "public-rss-research", "clarification-flow", "multilingual-site-draft"]})
+            json_response(self, {"ok": True, "capabilities": ["public-web-search", "public-page-research", "public-rss-research", "clarification-flow", "multilingual-site-draft"]})
             return
         return super().do_GET()
 
@@ -137,11 +206,16 @@ class KrokHandler(SimpleHTTPRequestHandler):
                     values = re.split(r"[\n,]+", values)
                 urls.extend(clean(value, 800) for value in values if clean(value, 800))
             urls = list(dict.fromkeys(urls))[:12]
+            brief = clean(payload.get("brief", ""), 500)
+            discovered = []
+            if not urls and len(brief) >= 12:
+                discovered = search_public_web(brief)
+                urls = [item["url"] for item in discovered]
             if not urls:
-                json_response(self, {"ok": True, "needs_clarification": True, "questions": ["Додайте 1–3 публічні URL конкурентів або RSS-канали соціальних мереж.", "У якому місті або на якому ринку працює бізнес?", "Хто головний клієнт і яку дію він має виконати на сайті?"]})
+                json_response(self, {"ok": True, "needs_clarification": True, "questions": ["Опишіть бізнес і ринок простими словами, щоб знайти публічні конкурентні джерела.", "Додайте 1–3 публічні URL конкурентів або RSS-канали соціальних мереж, якщо вони відомі.", "Хто головний клієнт і яку дію він має виконати на сайті?"]})
                 return
             results = [fetch_public(url) for url in urls]
-            json_response(self, {"ok": True, "needs_clarification": False, "query": clean(payload.get("brief", ""), 500), "languages": payload.get("languages", ["uk", "en", "bs"]), "sources": results, "human_review_required": True, "policy": "Тільки відкриті джерела; без входу, CAPTCHA, paywall, robots.txt обходу або приватних даних."})
+            json_response(self, {"ok": True, "needs_clarification": False, "query": brief, "languages": payload.get("languages", ["uk", "en", "bs"]), "discovered": discovered, "sources": results, "human_review_required": True, "policy": "Тільки відкриті джерела; без входу, CAPTCHA, paywall, robots.txt обходу або приватних даних."})
             return
         if path == "/api/clarify":
             brief = clean(payload.get("brief", ""), 1000)
